@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+/.idea
+.vscode
+.DS_Store
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+/.parcel-cache
+.turbo
+.cache
+/.vite
+coverage/
+*.local
+/*.log
+
+# Editor directories and files
+/.history
