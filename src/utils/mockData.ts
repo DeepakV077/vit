@@ -89,6 +89,35 @@ export const oceanRegions: OceanParameter[] = [
   }
 ];
 
+// Lightweight alias used by some components (MapView expects IOceanData)
+export type IOceanData = OceanParameter & {
+  isClicked?: boolean;
+};
+
+// Points of interest / highlighted places shown on the map
+export const highlightedPlaces: IOceanData[] = [
+  {
+    latitude: 13.0578,
+    longitude: 80.2489,
+    temperature: 29.0,
+    salinity: 34.8,
+    depth: 60,
+    density: 1024.9,
+    timestamp: '2025-10-29T10:30:00Z',
+    region: 'Pulicat Lagoon (POI)',
+  },
+  {
+    latitude: 9.9312,
+    longitude: 78.1211,
+    temperature: 28.7,
+    salinity: 35.0,
+    depth: 40,
+    density: 1025.1,
+    timestamp: '2025-10-29T10:30:00Z',
+    region: 'Rameswaram (POI)',
+  }
+];
+
 export const marineSpeciesData: MarineSpecies[] = [
   {
     id: 'coral',

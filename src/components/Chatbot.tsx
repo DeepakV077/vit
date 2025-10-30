@@ -1,308 +1,256 @@
-import { useState, useRef, useEffect } from 'react';
-import { Card } from './ui/card';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Badge } from './ui/badge';
-import { MessageCircle, Send, Bot, User, Sparkles } from 'lucide-react';
-import { chatbotResponses, marineSpeciesData } from '../utils/mockData';
+import { useState, useRef, useEffect } from "react";
+import { Bot, User, Send, X, MessageCircle, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { ScrollArea } from "./ui/scroll-area";
+import { Badge } from "./ui/badge";
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
-  timestamp: Date;
+  timestamp: string;
 }
 
+const STORAGE_KEY = "oceaniq_qa_v1";
+
+/**
+ * Dummy local-only chatbot implementation.
+ * No network or API calls — replies are generated locally with simple heuristics
+ * and canned responses. Useful for offline demos and testing.
+ */
 export function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
-      role: 'assistant',
-      content: chatbotResponses.greeting,
-      timestamp: new Date()
-    }
+      id: "1",
+      role: "assistant",
+      content:
+        "Hello! 🌊 I’m OceanIQ — your offline demo AI. I can give canned explanations about marine topics and replay stored Q&A. Try asking about coral bleaching or add your own Q&A.",
+      timestamp: new Date().toISOString(),
+    },
   ]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [useGemini, setUseGemini] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const generateResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
+  useEffect(() => {
+    // no stored Q&A to load (feature removed)
+  }, []);
 
-    // Check for species-specific queries
-    for (const species of marineSpeciesData) {
-      if (lowerMessage.includes(species.name.toLowerCase())) {
-        return chatbotResponses.speciesInfo(species.name);
-      }
+  // stored Q&A feature removed — no persistence or add/remove helpers
+
+  // Local dummy response generator — no APIs used.
+  const generateDummyReply = async (prompt: string) => {
+    // Simulate thinking/typing delay
+    await new Promise((res) => setTimeout(res, 600 + Math.random() * 900));
+
+    const normalized = prompt.toLowerCase();
+
+    // Exact or fuzzy match against stored Q&A
+    const best = storedQA.find(
+      (q) =>
+        q.question.toLowerCase() === normalized ||
+        normalized.includes(q.question.toLowerCase()) ||
+        q.question.toLowerCase().includes(normalized)
+    );
+    if (best) {
+      return `Stored answer — "${best.answer}"`;
     }
 
-    // Check for habitat/region queries
-    if (lowerMessage.includes('habitat') || lowerMessage.includes('near') || lowerMessage.includes('coast')) {
-      return "To check species habitability for a specific region, please use the 'Species Predict' page where you can enter environmental parameters like temperature, salinity, and depth. I can then provide detailed predictions for Coral, Tuna, and Mangroves.";
+    // Some simple heuristics for common marine topics
+    if (normalized.includes("coral")) {
+      return [
+        "Coral bleaching happens when corals expel the symbiotic algae living in their tissues due to stress (often heat). This leaves the coral white and, if prolonged, can lead to mortality.",
+        "Key mitigation: reduce local stressors (pollution, overfishing), protect resilient reefs, and cut greenhouse gas emissions to limit warming."
+      ].join("\n\n");
     }
 
-    // Check for ocean health queries
-    if (lowerMessage.includes('ocean') && (lowerMessage.includes('health') || lowerMessage.includes('status'))) {
-      return chatbotResponses.oceanHealth;
+    if (normalized.includes("mangrove")) {
+      return "Mangroves are coastal forests that protect shorelines, sequester carbon, and provide nursery habitat. Protecting them involves preventing clearing, restoring tidal flows, and protecting against pollution.";
     }
 
-    // Check for prediction queries
-    if (lowerMessage.includes('predict') || lowerMessage.includes('suitability')) {
-      return "I can help predict species suitability! Navigate to the 'Species Predict' page and enter environmental parameters such as temperature (15-35°C), salinity (0-40 PSU), depth (0-1000m), and density (1020-1030 kg/m³). The AI will analyze these conditions and provide suitability scores for Coral, Tuna, and Mangroves.";
+    if (normalized.includes("overfishing")) {
+      return "Overfishing occurs when fish are removed faster than they can reproduce. Solutions include catch limits, protected areas, gear restrictions, and community-based management.";
     }
 
-    // Check for conservation queries
-    if (lowerMessage.includes('conservation') || lowerMessage.includes('protect') || lowerMessage.includes('threat')) {
-      return "Marine conservation is critical. Major threats include climate change, ocean acidification, overfishing, pollution, and habitat destruction. You can help by supporting marine protected areas, choosing sustainable seafood, reducing plastic use, and supporting conservation organizations. Check our Encyclopedia for specific threats to each species.";
+    if (normalized.includes("temperature") || normalized.includes("trend")) {
+      return "Temperature trends generally show warming in many ocean regions over recent decades due to climate change. For demo purposes, visualize historical sea surface temperature increases and seasonal variability.";
     }
 
-    // Check for data/dashboard queries
-    if (lowerMessage.includes('data') || lowerMessage.includes('dashboard') || lowerMessage.includes('statistics')) {
-      return "The Dashboard page shows real-time ocean environmental data including temperature trends, salinity levels, and species diversity across different regions. You can select from 5 ocean regions including Chennai Coast, Kanyakumari, Pondicherry, Bali, and Florida Keys to view detailed analytics.";
-    }
-
-    // Check for map queries
-    if (lowerMessage.includes('map') || lowerMessage.includes('location') || lowerMessage.includes('region')) {
-      return "The Map View provides an interactive visualization of ocean regions with color-coded temperature overlays. Click on any marker to see detailed environmental parameters and AI-powered species predictions for that location.";
-    }
-
-    // Greeting responses
-    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-      return "Hello! I'm your OceanIQ AI Assistant. I can help you with marine species information, habitat predictions, ocean data analysis, and conservation topics. What would you like to know?";
-    }
-
-    // Thank you responses
-    if (lowerMessage.includes('thank')) {
-      return "You're welcome! Feel free to ask me anything about marine ecosystems, species, or ocean data. I'm here to help!";
-    }
-
-    // Default response
-    return chatbotResponses.default;
-  };
-
-  const sendToGemini = async (prompt: string) => {
-    try {
-      const resp = await fetch('/make-server-86c3a706/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => null);
-        throw new Error(err?.error || `Server returned ${resp.status}`);
-      }
-
-      const data = await resp.json();
-      return data?.reply || null;
-    } catch (err) {
-      console.error('Gemini request failed:', err);
-      return null;
-    }
+    // Generic fallback responses with a helpful tone
+    const generic = [
+      `Interesting question about: "${prompt}". In this demo, I provide canned explanations. Try asking about coral bleaching, mangroves, or add a stored Q&A for instant replies.`,
+      `Here's a short explanation related to "${prompt}": This is a demo response summarizing common knowledge. For live data or model-backed answers, integrate a backend API.`,
+      `I don't have a specific entry for "${prompt}", but you can save Q&A in the sidebar and replay them into the chat.`
+    ];
+    return generic[Math.floor(Math.random() * generic.length)];
   };
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    const trimmed = input.trim();
+    if (!trimmed) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-      timestamp: new Date()
+    setError(null);
+
+    const userMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: trimmed,
+      timestamp: new Date().toISOString(),
     };
-
-  setMessages((prev: Message[]) => [...prev, userMessage]);
-    setInput('');
+    const aiMsg: Message = {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg, aiMsg]);
+    setInput("");
     setIsTyping(true);
 
-    // Try Gemini proxy when enabled; otherwise use the local generator
-    let response: string | null = null;
-    if (useGemini) {
-      response = await sendToGemini(userMessage.content);
+    try {
+      const reply = await generateDummyReply(trimmed);
+      setMessages((prev) => prev.map((m) => (m.id === aiMsg.id ? { ...m, content: String(reply) } : m)));
+    } catch (e) {
+      console.error("Dummy reply failed", e);
+      setMessages((prev) => prev.map((m) => (m.id === aiMsg.id ? { ...m, content: "⚠️ Unexpected error generating reply." } : m)));
+    } finally {
+      setIsTyping(false);
     }
+  };
 
-    if (!response) {
-      // Fallback to the built-in generator
-      response = generateResponse(userMessage.content);
-    }
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response,
-      timestamp: new Date()
-    };
-
-  setMessages((prev: Message[]) => [...prev, assistantMessage]);
+  const cancelStreaming = () => {
+    // For the dummy bot, just stop the typing indicator.
     setIsTyping(false);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const suggestedQuestions = [
-    "Tell me about coral reefs",
-    "What threatens bluefin tuna?",
-    "How do I predict species habitability?",
-    "Show me ocean health status",
-    "What are mangrove forests?"
+  const quickPrompts = [
+    "Explain coral bleaching",
+    "How can we protect mangroves?",
+    "Show ocean temperature trends",
+    "What causes overfishing?",
+    "Predict species habitat suitability",
   ];
 
+  // stored Q&A removed
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <MessageCircle className="w-8 h-8 text-indigo-600" />
-            <h1 className="text-4xl text-gray-900">AI Assistant</h1>
+    <div className="min-h-screen bg-linear-to-br from-white via-blue-50 to-cyan-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-950 py-16">
+      <div className="max-w-7xl mx-auto px-8 space-y-10">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <div className="bg-linear-to-tr from-blue-600 to-cyan-500 text-white w-14 h-14 rounded-3xl flex items-center justify-center shadow-xl">
+            <MessageCircle className="w-6 h-6" />
           </div>
-          <p className="text-gray-600">Ask questions about marine ecosystems, species, and ocean data</p>
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-gray-100">OceanIQ AI Chatbot (Demo)</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Offline demo — no API calls. Add stored Q&A or use suggested prompts.</p>
+          </div>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Suggested Questions Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-indigo-600" />
-                <h3 className="text-lg text-gray-900">Suggested Questions</h3>
-              </div>
-              <div className="space-y-2">
-                {suggestedQuestions.map((question, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setInput(question)}
-                    className="w-full text-left p-3 rounded-lg bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 transition-colors text-sm text-gray-700 hover:text-indigo-700"
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* Sidebar */}
+          <div className="space-y-6 md:col-span-1">
+            <Card className="rounded-xl shadow-lg overflow-hidden">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                  Suggested Prompts
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                {quickPrompts.map((q) => (
+                  <Button
+                    key={q}
+                    variant="ghost"
+                    className="w-full justify-start h-11 text-left rounded-lg hover:bg-blue-50 dark:hover:bg-gray-800"
+                    onClick={() => setInput(q)}
                   >
-                    {question}
-                  </button>
+                    {q}
+                  </Button>
                 ))}
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                <h4 className="text-sm text-indigo-900 mb-2">What I can help with:</h4>
-                <ul className="text-xs text-indigo-800 space-y-1">
-                  <li>• Marine species information</li>
-                  <li>• Habitat predictions</li>
-                  <li>• Conservation topics</li>
-                  <li>• Ocean data analysis</li>
-                  <li>• Environmental parameters</li>
+            {/* Stored Q&A removed */}
+
+            <Card className="rounded-xl border bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-blue-700 dark:text-blue-300 text-base">What I can help with 🌊</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ul className="list-disc list-inside text-blue-700 dark:text-blue-200 text-sm space-y-1">
+                  <li>Marine species information (canned)</li>
+                  <li>Replay stored Q&A instantly</li>
+                  <li>Demo-friendly explanations</li>
+                  <li>No external API required</li>
                 </ul>
-              </div>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Chat Interface */}
-          <Card className="lg:col-span-3 flex flex-col h-[calc(100vh-16rem)]">
-            {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  {/* Avatar */}
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      message.role === 'user'
-                        ? 'bg-blue-600'
-                        : 'bg-gradient-to-br from-indigo-600 to-purple-600'
-                    }`}
+          {/* Chat Section */}
+          <Card className="md:col-span-2 flex flex-col h-[82vh] rounded-xl shadow-2xl overflow-hidden">
+            <ScrollArea className="flex-1 p-6 space-y-6 bg-linear-to-b from-white/60 to-transparent dark:from-gray-900/50">
+              <AnimatePresence>
+                {messages.map((msg) => (
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                   >
-                    {message.role === 'user' ? (
-                      <User className="w-5 h-5 text-white" />
-                    ) : (
-                      <Bot className="w-5 h-5 text-white" />
-                    )}
-                  </div>
-
-                  {/* Message Bubble */}
-                  <div
-                    className={`flex-1 max-w-2xl ${
-                      message.role === 'user' ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge
-                        variant="outline"
-                        className={
-                          message.role === 'user'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                        }
-                      >
-                        {message.role === 'user' ? 'You' : 'OceanIQ AI'}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                    <div className={`max-w-xl p-4 rounded-2xl shadow-sm ${msg.role === "user" ? "bg-blue-600 text-white rounded-br-none" : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-none"}`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {msg.role === "user" ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                        <Badge variant="outline" className="text-xs">{msg.role === "user" ? "You" : "OceanIQ (Demo)"}</Badge>
+                      </div>
+                      <p className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</p>
                     </div>
-                    <div
-                      className={`inline-block p-4 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
 
-              {/* Typing Indicator */}
               {isTyping && (
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-5 h-5 text-white" />
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-3">
+                  <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-50 dark:bg-gray-800">
+                    <Bot className="w-5 h-5 text-blue-600" />
                   </div>
-                  <div className="bg-gray-100 rounded-lg p-4">
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    </div>
+                  <div className="flex gap-1">
+                    <motion.div className="w-2.5 h-2.5 bg-blue-400 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 0.8 }} />
+                    <motion.div className="w-2.5 h-2.5 bg-blue-400 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: 0.15 }} />
+                    <motion.div className="w-2.5 h-2.5 bg-blue-400 rounded-full" animate={{ y: [0, -6, 0] }} transition={{ repeat: Infinity, duration: 0.8, delay: 0.3 }} />
                   </div>
-                </div>
+                  <Button variant="ghost" size="sm" onClick={cancelStreaming} className="ml-auto"><X className="w-4 h-4" /></Button>
+                </motion.div>
               )}
-
               <div ref={messagesEndRef} />
-            </div>
+            </ScrollArea>
 
             {/* Input Area */}
-            <div className="border-t border-gray-200 p-4 bg-white">
-              <div className="flex gap-2">
+            <div className="p-6 border-t bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+              <div className="flex gap-3 items-center">
                 <Input
+                  placeholder="Ask me about coral reefs, ocean data..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ask me anything about marine ecosystems..."
-                  className="flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+                  disabled={isTyping}
+                  className="flex-1 h-12 rounded-lg"
                 />
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isTyping}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                >
+                <Button onClick={handleSend} disabled={!input.trim() || isTyping} className="h-12 px-4 rounded-lg">
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Press Enter to send, Shift + Enter for new line
-              </p>
+              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
             </div>
           </Card>
         </div>
@@ -310,3 +258,5 @@ export function Chatbot() {
     </div>
   );
 }
+
+export default Chatbot;

@@ -6,9 +6,10 @@ interface NavbarProps {
   onNavigate: (page: string) => void;
   isAuthenticated: boolean;
   onAuthClick: () => void;
+  userEmail?: string;
 }
 
-export function Navbar({ currentPage, onNavigate, isAuthenticated, onAuthClick }: NavbarProps) {
+export function Navbar({ currentPage, onNavigate, isAuthenticated, onAuthClick, userEmail }: NavbarProps) {
   const navItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -56,14 +57,18 @@ export function Navbar({ currentPage, onNavigate, isAuthenticated, onAuthClick }
 
           {/* Auth Button */}
           <Button
-            onClick={onAuthClick}
+            onClick={() => {
+              if (isAuthenticated) onAuthClick();
+              else onNavigate('login');
+            }}
             variant="outline"
             className="bg-white/10 border-white/20 text-white hover:bg-white/20"
           >
             {isAuthenticated ? (
               <>
                 <User className="w-4 h-4 mr-2" />
-                Profile
+                <span className="mr-2">Profile</span>
+                {userEmail ? <span className="text-xs text-cyan-200">{userEmail}</span> : null}
               </>
             ) : (
               <>

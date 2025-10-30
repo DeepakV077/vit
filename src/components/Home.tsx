@@ -1,4 +1,4 @@
-import { ImageWithFallback } from './figma/ImageWithFallback';
+import { ImageWithFallback } from './Fallback/ImageWithFallback';
 import { Button } from './ui/button';
 import { Waves, Brain, Map, LineChart, Shield, Zap } from 'lucide-react';
 
@@ -46,7 +46,7 @@ export function Home({ onNavigate }: HomeProps) {
       <div className="relative h-[600px] bg-gradient-to-r from-blue-900 via-blue-800 to-cyan-800 overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <ImageWithFallback
-            src="https://tse1.mm.bing.net/th/id/OIP.fIhxz7NmLUi-Ckh4JGS8dAHaEw?rs=1&pid=ImgDetMain&o=7&rm=3"
+            src="https://images.unsplash.com/photo-1686816189172-451cdc8e7bc1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxvY2VhbiUyMHdhdmVzJTIwYmx1ZXxlbnwxfHx8fDE3NjE2Mzg2OTJ8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
             alt="Ocean waves"
             className="w-full h-full object-cover"
           />
@@ -87,7 +87,7 @@ export function Home({ onNavigate }: HomeProps) {
       {/* Features Grid */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
-          <h2 className="text-4xl text-gray-900 mb-4">Platform Features</h2>
+          <h2 className="text-4xl text-text-gray-900 mb-4">Platform Features</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Comprehensive tools for marine research, education, and conservation efforts
           </p>
